@@ -26,8 +26,7 @@
     h1 { font-size: 1.8rem; margin-bottom: 4px; }
     .subtitle { color: var(--muted); }
 
-    /* Tabs */
-    .tabs { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px; flex-wrap: wrap; }
     .tab {
       background: transparent;
       border: none;
@@ -93,7 +92,7 @@
       font-family: monospace;
       font-size: 0.85rem;
       white-space: pre-wrap;
-      max-height: 300px;
+      max-height: 320px;
       overflow-y: auto;
     }
 
@@ -119,7 +118,7 @@
       <button class="tab" data-tab="downloads">Downloads</button>
     </div>
 
-    <!-- PATCHES TAB -->
+    <!-- PATCHES -->
     <div id="patches" class="panel active">
       <div class="card">
         <h2>Select Patch Source</h2>
@@ -137,7 +136,7 @@
       </div>
     </div>
 
-    <!-- APPS TAB -->
+    <!-- APPS -->
     <div id="apps" class="panel">
       <div class="card">
         <h2>Select Apps</h2>
@@ -152,14 +151,14 @@
       <div class="card">
         <h2>Start Build</h2>
         <p class="muted" style="margin-bottom:16px;">
-          This will trigger a GitHub Actions workflow with your selected options.
+          Click the button below, then click the green "Run workflow" button on the Actions page.
         </p>
         <button class="primary" onclick="triggerBuild()">Build Now</button>
         <p class="muted" style="margin-top:12px;" id="triggerMsg"></p>
       </div>
     </div>
 
-    <!-- STATUS TAB -->
+    <!-- STATUS -->
     <div id="status" class="panel">
       <div class="card">
         <h2>Current / Last Build Status</h2>
@@ -169,7 +168,7 @@
       </div>
     </div>
 
-    <!-- DOWNLOADS TAB -->
+    <!-- DOWNLOADS -->
     <div id="downloads" class="panel">
       <div class="card">
         <h2>Latest Builds</h2>
@@ -179,13 +178,8 @@
   </div>
 
   <script>
-    // ======================
-    // CONFIG - CHANGE THIS
-    // ======================
-    const REPO = "porsche-creator/revanced-patch-builder";   // ← your repo
-    // ======================
+    const REPO = "porsche-creator/revanced-patch-builder";
 
-    // Tab switching
     document.querySelectorAll('.tab').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
@@ -195,13 +189,10 @@
       });
     });
 
-    // Show/hide custom repo input
     document.getElementById('patchSource').addEventListener('change', (e) => {
-      document.getElementById('customRepoBox').style.display = 
-        e.target.value === 'custom' ? 'block' : 'none';
+      document.getElementById('customRepoBox').style.display = e.target.value === 'custom' ? 'block' : 'none';
     });
 
-    // Trigger build (opens the Actions page with instructions)
     function triggerBuild() {
       const patches = document.getElementById('patchSource').value;
       const customRepo = document.getElementById('customRepo').value;
@@ -210,31 +201,27 @@
 
       const msg = document.getElementById('triggerMsg');
       msg.innerHTML = `
-        Selected: <b>${patches}</b> → Apps: <b>${apps || 'none'}</b><br><br>
+        <b>Selected:</b> ${patches} → ${apps || 'none'}<br><br>
         <a href="https://github.com/${REPO}/actions/workflows/build.yml" target="_blank" style="color:#3b82f6">
-          → Click here to open Actions and click "Run workflow"
-        </a><br>
-        Then paste these values:<br>
-        • Patches: <code>${patches}</code><br>
+          → Open Actions and click "Run workflow"
+        </a><br><br>
+        Use these values:<br>
+        • Patch source: <code>${patches}</code><br>
         • Apps: <code>${apps}</code><br>
         ${patches === 'custom' ? `• Custom repo: <code>${customRepo}</code>` : ''}
       `;
     }
 
-    // Load status
     async function loadStatus() {
       const box = document.getElementById('statusBox');
-      box.textContent = "Loading workflow runs...";
-
+      box.textContent = "Loading...";
       try {
         const res = await fetch(`https://api.github.com/repos/${REPO}/actions/runs?per_page=5`);
         const data = await res.json();
-
-        if (!data.workflow_runs || data.workflow_runs.length === 0) {
+        if (!data.workflow_runs?.length) {
           box.textContent = "No workflow runs yet.";
           return;
         }
-
         let text = "";
         data.workflow_runs.forEach(run => {
           text += `[${run.status}] ${run.display_title || run.name}\n`;
@@ -242,28 +229,25 @@
           text += `   ${run.html_url}\n\n`;
         });
         box.textContent = text;
-      } catch (err) {
+      } catch {
         box.textContent = "Failed to load status.";
       }
     }
 
-    // Load downloads
     async function loadDownloads() {
       const box = document.getElementById('downloadsBox');
       try {
-        const res = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=3`);
+        const res = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=5`);
         const releases = await res.json();
-
         if (!releases.length) {
-          box.innerHTML = "<p class='muted'>No releases yet. Run a build first.</p>";
+          box.innerHTML = "<p class='muted'>No releases yet.</p>";
           return;
         }
-
         let html = "";
         releases.forEach(rel => {
           html += `<h3 style="margin:16px 0 8px">${rel.name || rel.tag_name}</h3>`;
           html += `<p class="muted">${new Date(rel.published_at).toLocaleString()}</p><ul class="download-list">`;
-          rel.assets.forEach(asset => {
+          (rel.assets || []).forEach(asset => {
             if (asset.name.endsWith('.apk')) {
               const size = (asset.size / 1024 / 1024).toFixed(1);
               html += `<li><a href="${asset.browser_download_url}">${asset.name}</a> (${size} MB)</li>`;
@@ -271,13 +255,12 @@
           });
           html += `</ul>`;
         });
-        box.innerHTML = html;
-      } catch (err) {
+        box.innerHTML = html || "<p class='muted'>No APKs found in releases.</p>";
+      } catch {
         box.innerHTML = "<p class='muted'>Failed to load releases.</p>";
       }
     }
 
-    // Initial load
     loadStatus();
     loadDownloads();
   </script>
