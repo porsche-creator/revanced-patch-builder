@@ -3,66 +3,283 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>My ReVanced Builds</title>
+  <title>ReVanced Patch Builder</title>
   <style>
+    :root {
+      --bg: #0b0f14;
+      --card: #12181f;
+      --border: #1e293b;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #22c55e;
+      --accent2: #3b82f6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: system-ui, -apple-system, sans-serif;
-      background: #0c0c0c;
-      color: #e5e5e5;
-      max-width: 720px;
-      margin: 40px auto;
-      padding: 0 20px;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
     }
-    h1 { color: #4ade80; margin-bottom: 8px; }
+    .container { max-width: 900px; margin: 0 auto; padding: 24px; }
+    header { margin-bottom: 32px; }
+    h1 { font-size: 1.8rem; margin-bottom: 4px; }
+    .subtitle { color: var(--muted); }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+    .tab {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    .tab.active { background: var(--card); color: var(--text); font-weight: 600; }
+    .tab:hover { color: var(--text); }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
     .card {
-      background: #161616;
+      background: var(--card);
+      border: 1px solid var(--border);
       border-radius: 12px;
       padding: 20px;
-      margin: 20px 0;
+      margin-bottom: 16px;
     }
-    a { color: #60a5fa; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .muted { color: #888; font-size: 0.9rem; }
+    .card h2 { font-size: 1.1rem; margin-bottom: 12px; }
+
+    label { display: block; margin-bottom: 6px; font-size: 0.9rem; color: var(--muted); }
+    select, input[type="text"] {
+      width: 100%;
+      padding: 10px 12px;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    .checkbox-group { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+    .checkbox-group label { display: flex; align-items: center; gap: 8px; color: var(--text); cursor: pointer; }
+
+    button.primary {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    button.primary:hover { filter: brightness(1.1); }
+    button.secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .status-box {
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      white-space: pre-wrap;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .download-list { list-style: none; }
+    .download-list li { margin: 8px 0; }
+    .download-list a { color: var(--accent2); text-decoration: none; }
+    .download-list a:hover { text-decoration: underline; }
+
+    .muted { color: var(--muted); font-size: 0.9rem; }
   </style>
 </head>
 <body>
-  <h1>My ReVanced Builds</h1>
-  <p class="muted">Auto-built from scratch • Updated daily</p>
+  <div class="container">
+    <header>
+      <h1>ReVanced Patch Builder</h1>
+      <p class="subtitle">Interactive dashboard • Auto builds with GitHub Actions</p>
+    </header>
 
-  <div id="content">Loading latest release...</div>
+    <div class="tabs">
+      <button class="tab active" data-tab="patches">Patches</button>
+      <button class="tab" data-tab="apps">Apps</button>
+      <button class="tab" data-tab="status">What is it doing?</button>
+      <button class="tab" data-tab="downloads">Downloads</button>
+    </div>
+
+    <!-- PATCHES TAB -->
+    <div id="patches" class="panel active">
+      <div class="card">
+        <h2>Select Patch Source</h2>
+        <label>Patches</label>
+        <select id="patchSource">
+          <option value="base">Base (Morphe)</option>
+          <option value="anddea">anddea (ReVanced Extended)</option>
+          <option value="custom">Custom repository</option>
+        </select>
+
+        <div id="customRepoBox" style="display:none;">
+          <label>Custom patches repo (example: username/repo)</label>
+          <input type="text" id="customRepo" placeholder="anddea/revanced-patches">
+        </div>
+      </div>
+    </div>
+
+    <!-- APPS TAB -->
+    <div id="apps" class="panel">
+      <div class="card">
+        <h2>Select Apps</h2>
+        <div class="checkbox-group">
+          <label><input type="checkbox" value="youtube" checked> YouTube</label>
+          <label><input type="checkbox" value="youtube-music" checked> YouTube Music</label>
+          <label><input type="checkbox" value="reddit"> Reddit</label>
+        </div>
+        <p class="muted">Built-in downloader will fetch compatible stock APKs automatically.</p>
+      </div>
+
+      <div class="card">
+        <h2>Start Build</h2>
+        <p class="muted" style="margin-bottom:16px;">
+          This will trigger a GitHub Actions workflow with your selected options.
+        </p>
+        <button class="primary" onclick="triggerBuild()">Build Now</button>
+        <p class="muted" style="margin-top:12px;" id="triggerMsg"></p>
+      </div>
+    </div>
+
+    <!-- STATUS TAB -->
+    <div id="status" class="panel">
+      <div class="card">
+        <h2>Current / Last Build Status</h2>
+        <div class="status-box" id="statusBox">Loading...</div>
+        <br>
+        <button class="secondary" onclick="loadStatus()">Refresh</button>
+      </div>
+    </div>
+
+    <!-- DOWNLOADS TAB -->
+    <div id="downloads" class="panel">
+      <div class="card">
+        <h2>Latest Builds</h2>
+        <div id="downloadsBox">Loading...</div>
+      </div>
+    </div>
+  </div>
 
   <script>
-    // ← CHANGE THIS to your username/repo
-    const REPO = "porsche-creator/revanced-patch-builder";
+    // ======================
+    // CONFIG - CHANGE THIS
+    // ======================
+    const REPO = "porsche-creator/revanced-patch-builder";   // ← your repo
+    // ======================
 
-    fetch(`https://api.github.com/repos/${REPO}/releases/latest`)
-      .then(r => r.json())
-      .then(release => {
-        if (!release.assets) {
-          document.getElementById("content").innerHTML = "<p>No releases yet. Run the Action first.</p>";
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Show/hide custom repo input
+    document.getElementById('patchSource').addEventListener('change', (e) => {
+      document.getElementById('customRepoBox').style.display = 
+        e.target.value === 'custom' ? 'block' : 'none';
+    });
+
+    // Trigger build (opens the Actions page with instructions)
+    function triggerBuild() {
+      const patches = document.getElementById('patchSource').value;
+      const customRepo = document.getElementById('customRepo').value;
+      const apps = [...document.querySelectorAll('#apps input[type=checkbox]:checked')]
+        .map(cb => cb.value).join(',');
+
+      const msg = document.getElementById('triggerMsg');
+      msg.innerHTML = `
+        Selected: <b>${patches}</b> → Apps: <b>${apps || 'none'}</b><br><br>
+        <a href="https://github.com/${REPO}/actions/workflows/build.yml" target="_blank" style="color:#3b82f6">
+          → Click here to open Actions and click "Run workflow"
+        </a><br>
+        Then paste these values:<br>
+        • Patches: <code>${patches}</code><br>
+        • Apps: <code>${apps}</code><br>
+        ${patches === 'custom' ? `• Custom repo: <code>${customRepo}</code>` : ''}
+      `;
+    }
+
+    // Load status
+    async function loadStatus() {
+      const box = document.getElementById('statusBox');
+      box.textContent = "Loading workflow runs...";
+
+      try {
+        const res = await fetch(`https://api.github.com/repos/${REPO}/actions/runs?per_page=5`);
+        const data = await res.json();
+
+        if (!data.workflow_runs || data.workflow_runs.length === 0) {
+          box.textContent = "No workflow runs yet.";
           return;
         }
 
-        let html = `
-          <div class="card">
-            <h2>${release.name || release.tag_name}</h2>
-            <p class="muted">${new Date(release.published_at).toLocaleString()}</p>
-            <ul>
-        `;
-
-        release.assets.forEach(asset => {
-          if (asset.name.endsWith(".apk")) {
-            const size = (asset.size / 1024 / 1024).toFixed(1);
-            html += `<li><a href="${asset.browser_download_url}">${asset.name}</a> — ${size} MB</li>`;
-          }
+        let text = "";
+        data.workflow_runs.forEach(run => {
+          text += `[${run.status}] ${run.display_title || run.name}\n`;
+          text += `   ${new Date(run.created_at).toLocaleString()} • ${run.conclusion || 'running'}\n`;
+          text += `   ${run.html_url}\n\n`;
         });
+        box.textContent = text;
+      } catch (err) {
+        box.textContent = "Failed to load status.";
+      }
+    }
 
-        html += `</ul></div>`;
-        document.getElementById("content").innerHTML = html;
-      })
-      .catch(() => {
-        document.getElementById("content").innerHTML = "<p>Failed to load releases.</p>";
-      });
+    // Load downloads
+    async function loadDownloads() {
+      const box = document.getElementById('downloadsBox');
+      try {
+        const res = await fetch(`https://api.github.com/repos/${REPO}/releases?per_page=3`);
+        const releases = await res.json();
+
+        if (!releases.length) {
+          box.innerHTML = "<p class='muted'>No releases yet. Run a build first.</p>";
+          return;
+        }
+
+        let html = "";
+        releases.forEach(rel => {
+          html += `<h3 style="margin:16px 0 8px">${rel.name || rel.tag_name}</h3>`;
+          html += `<p class="muted">${new Date(rel.published_at).toLocaleString()}</p><ul class="download-list">`;
+          rel.assets.forEach(asset => {
+            if (asset.name.endsWith('.apk')) {
+              const size = (asset.size / 1024 / 1024).toFixed(1);
+              html += `<li><a href="${asset.browser_download_url}">${asset.name}</a> (${size} MB)</li>`;
+            }
+          });
+          html += `</ul>`;
+        });
+        box.innerHTML = html;
+      } catch (err) {
+        box.innerHTML = "<p class='muted'>Failed to load releases.</p>";
+      }
+    }
+
+    // Initial load
+    loadStatus();
+    loadDownloads();
   </script>
 </body>
 </html>
