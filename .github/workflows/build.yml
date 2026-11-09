@@ -2,8 +2,26 @@ name: Build ReVanced APKs
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 5 * * *"   # every day at 05:00 UTC
+    inputs:
+      patches:
+        description: "Patch source"
+        required: true
+        default: "base"
+        type: choice
+        options:
+          - base
+          - anddea
+          - custom
+      apps:
+        description: "Apps to build (comma separated)"
+        required: true
+        default: "youtube,youtube-music"
+        type: string
+      custom_patches_repo:
+        description: "Custom patches repo (only if patches=custom)"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: write
@@ -22,6 +40,10 @@ jobs:
           java-version: "21"
 
       - name: Build
+        env:
+          PATCH_SOURCE: ${{ inputs.patches }}
+          APPS: ${{ inputs.apps }}
+          CUSTOM_PATCHES_REPO: ${{ inputs.custom_patches_repo }}
         run: |
           chmod +x build.sh
           ./build.sh
@@ -30,7 +52,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
-          name: Build ${{ github.run_number }}
+          name: "Build ${{ github.run_number }} (${{ inputs.patches }})"
+          body: |
+            **Patches:** ${{ inputs.patches }}
+            **Apps:** ${{ inputs.apps }}
           files: build/*.apk
           generate_release_notes: true
         env:
