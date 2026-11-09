@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My ReVanced Builds</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0c0c0c;
+      color: #e5e5e5;
+      max-width: 720px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+    h1 { color: #4ade80; margin-bottom: 8px; }
+    .card {
+      background: #161616;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    a { color: #60a5fa; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .muted { color: #888; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <h1>My ReVanced Builds</h1>
+  <p class="muted">Auto-built from scratch • Updated daily</p>
+
+  <div id="content">Loading latest release...</div>
+
+  <script>
+    // ← CHANGE THIS to your username/repo
+    const REPO = "YOUR_USERNAME/YOUR_REPO";
+
+    fetch(`https://api.github.com/repos/${REPO}/releases/latest`)
+      .then(r => r.json())
+      .then(release => {
+        if (!release.assets) {
+          document.getElementById("content").innerHTML = "<p>No releases yet. Run the Action first.</p>";
+          return;
+        }
+
+        let html = `
+          <div class="card">
+            <h2>${release.name || release.tag_name}</h2>
+            <p class="muted">${new Date(release.published_at).toLocaleString()}</p>
+            <ul>
+        `;
+
+        release.assets.forEach(asset => {
+          if (asset.name.endsWith(".apk")) {
+            const size = (asset.size / 1024 / 1024).toFixed(1);
+            html += `<li><a href="${asset.browser_download_url}">${asset.name}</a> — ${size} MB</li>`;
+          }
+        });
+
+        html += `</ul></div>`;
+        document.getElementById("content").innerHTML = html;
+      })
+      .catch(() => {
+        document.getElementById("content").innerHTML = "<p>Failed to load releases.</p>";
+      });
+  </script>
+</body>
+</html>
